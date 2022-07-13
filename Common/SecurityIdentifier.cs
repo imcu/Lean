@@ -618,6 +618,50 @@ namespace QuantConnect
             return result;
         }
 
+
+        /// <summary>
+        /// Generates a new <see cref="SecurityIdentifier"/> for a CryptoFuture security
+        /// </summary>
+        /// <param name="date"></param>
+        /// <param name="symbol"></param>
+        /// <param name="market"></param>
+        /// <param name="underlying"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static SecurityIdentifier GenerateCryptoFuture(
+            DateTime date,
+            string symbol,
+            string market,
+            SecurityIdentifier underlying = null
+            )
+        {
+            return market switch
+            {
+                "ftx" => GenerateFtxCryptoFuture(date, symbol),
+                _ => throw new NotImplementedException("The specified market does not have the CryptoFuture asset class.")
+            };
+        }
+
+        private static SecurityIdentifier GenerateFtxCryptoFuture(DateTime date, string symbol, SecurityIdentifier underlying = null)
+        {
+            var year = date.Year;
+            var month = FuturesExpiryUtilityFunctions.GetQuarterLastMonth(date);
+            var expiryYearMonth = new DateTime(year, month, 1);
+            var lastFriday= FuturesExpiryUtilityFunctions.LastFriday(expiryYearMonth);
+            var ftxExpiry = new DateTime(lastFriday.Year, lastFriday.Month, lastFriday.Day, 2, 0, 0);
+
+            var expiryStr = $"{ftxExpiry.Month}{ftxExpiry.Day}";
+            var ticker = $"{symbol}-{expiryStr}";
+
+            underlying = new SecurityIdentifier(symbol, 0);
+            var result = new SecurityIdentifier(ticker, 0, underlying)
+            {
+                _date = ftxExpiry
+            };
+            return result;
+        }
+
+
         /// <summary>
         /// Resolves the first ticker/date of the security represented by <paramref name="tickerToday"/>
         /// </summary>

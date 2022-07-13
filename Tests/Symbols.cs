@@ -169,6 +169,16 @@ namespace QuantConnect.Tests
             return Symbol.Create(symbol, SecurityType.Crypto, Market.GDAX);
         }
 
+        public static Symbol CreateCryptoFutureSymbol(string symbol, DateTime expiry)
+        {
+            string market;
+            if (!SymbolPropertiesDatabase.FromDataFolder().TryGetMarket(symbol, SecurityType.Future, out market))
+            {
+                market = DefaultBrokerageModel.DefaultMarketMap[SecurityType.Future];
+            }
+            return Symbol.CreateFuture(symbol, market, expiry);
+        }
+
         private static Symbol CreateOptionsCanonicalSymbol(string underlying)
         {
             return Symbol.Create(underlying, SecurityType.Option, Market.USA, "?" + underlying);

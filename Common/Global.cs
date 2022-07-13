@@ -320,6 +320,11 @@ namespace QuantConnect
         /// For index options traded on American markets, they tend to be European-style options and are Cash-settled.
         /// </remarks>
         IndexOption,
+
+        /// <summary>
+        /// Cryptocurrency Future Security Type (11)
+        /// </summary>
+        CryptoFuture,
     }
 
     /// <summary>

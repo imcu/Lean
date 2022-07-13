@@ -30,6 +30,7 @@ using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Tests.Engine.DataFeeds;
 using QuantConnect.Securities.IndexOption;
 using QuantConnect.Data.Custom.AlphaStreams;
+using QuantConnect.Securities.CryptoFuture;
 using Index = QuantConnect.Securities.Index.Index;
 
 namespace QuantConnect.Tests.Algorithm
@@ -90,6 +91,9 @@ namespace QuantConnect.Tests.Algorithm
                     case SecurityType.Crypto:
                         var crypto = (Crypto)security;
                         break;
+                    case SecurityType.CryptoFuture:
+                        var cryptoFuture = (CryptoFuture)security;
+                        break;
                     case SecurityType.Base:
                         break;
                     default:
@@ -132,7 +136,8 @@ namespace QuantConnect.Tests.Algorithm
                     new TestCaseData(Symbols.SPY_P_192_Feb19_2016, null),
                     new TestCaseData(Symbol.CreateBase(typeof(AlphaStreamsPortfolioState), Symbols.SPY, Market.USA), typeof(AlphaStreamsPortfolioState)),
                     new TestCaseData(Symbol.Create("CustomData", SecurityType.Base, Market.Binance), null),
-                    new TestCaseData(Symbol.Create("CustomData2", SecurityType.Base, Market.COMEX), null)
+                    new TestCaseData(Symbol.Create("CustomData2", SecurityType.Base, Market.COMEX), null),
+                    new TestCaseData(Symbol.Create("BTC", SecurityType.CryptoFuture, Market.FTX), null)
                 };
 
                 foreach (var market in Market.SupportedMarkets())
@@ -140,6 +145,13 @@ namespace QuantConnect.Tests.Algorithm
                     foreach (var kvp in SymbolPropertiesDatabase.FromDataFolder().GetSymbolPropertiesList(market))
                     {
                         var securityDatabaseKey = kvp.Key;
+
+                        if (securityDatabaseKey.Market == "ftx" &&
+                            securityDatabaseKey.Symbol == "BTC" &&
+                            securityDatabaseKey.SecurityType == SecurityType.CryptoFuture)
+                        {
+                            Console.Out.WriteLine("here");
+                        }
                         if (securityDatabaseKey.SecurityType != SecurityType.FutureOption)
                         {
                             result.Add(new TestCaseData(Symbol.Create(securityDatabaseKey.Symbol, securityDatabaseKey.SecurityType,

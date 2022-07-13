@@ -94,6 +94,10 @@ namespace QuantConnect
                     sid = SecurityIdentifier.GenerateCrypto(ticker, market);
                     break;
 
+                case SecurityType.CryptoFuture:
+                    sid = SecurityIdentifier.GenerateCryptoFuture(SecurityIdentifier.DefaultDate, ticker, market);
+                    break;
+
                 case SecurityType.IndexOption:
                     return CreateOption(
                         Create(ticker, SecurityType.Index, market),
@@ -219,6 +223,21 @@ namespace QuantConnect
         {
             var sid = SecurityIdentifier.GenerateFuture(expiry, ticker, market);
 
+            return new Symbol(sid, alias ?? GetAlias(sid));
+        }
+
+        /// <summary>
+        /// Provides a convenience method for creating a future Symbol.
+        /// </summary>
+        /// <param name="ticker">The ticker</param>
+        /// <param name="market">The market the future resides in</param>
+        /// <param name="expiry">The future expiry date</param>
+        /// <param name="alias">An alias to be used for the symbol cache. Required when
+        /// adding the same security from different markets</param>
+        /// <returns>A new Symbol object for the specified future contract</returns>
+        public static Symbol CreateCryptoFuture(string ticker, string market, DateTime expiry, string alias = null)
+        {
+            var sid = SecurityIdentifier.GenerateFuture(expiry, ticker, market);
             return new Symbol(sid, alias ?? GetAlias(sid));
         }
 

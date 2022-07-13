@@ -403,6 +403,22 @@ namespace QuantConnect.Securities.Future
             return new DateTime(year, month, day).AddDays(-2);
         }
 
+        /// <summary>
+        /// Calculates the last month of of quarter for the specified date
+        /// </summary>
+        /// <param name="date">date to calculate the last month of the quarter for</param>
+        /// <returns>The number of the month of the quarter</returns>
+        public static int GetQuarterLastMonth(this DateTime date)
+        {
+            return date.Month switch
+            {
+                >= 1 and <= 3 => 3,
+                >= 4 and <= 6 => 6,
+                >= 7 and <= 9 => 9,
+                _ => 12
+            };
+        }
+
         private static readonly Dictionary<string, int> ExpiriesPriorMonth = new Dictionary<string, int>
         {
             { Futures.Energies.ArgusLLSvsWTIArgusTradeMonth, 1 },
