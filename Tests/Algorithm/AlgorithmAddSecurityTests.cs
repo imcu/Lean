@@ -145,13 +145,6 @@ namespace QuantConnect.Tests.Algorithm
                     foreach (var kvp in SymbolPropertiesDatabase.FromDataFolder().GetSymbolPropertiesList(market))
                     {
                         var securityDatabaseKey = kvp.Key;
-
-                        if (securityDatabaseKey.Market == "ftx" &&
-                            securityDatabaseKey.Symbol == "BTC" &&
-                            securityDatabaseKey.SecurityType == SecurityType.CryptoFuture)
-                        {
-                            Console.Out.WriteLine("here");
-                        }
                         if (securityDatabaseKey.SecurityType != SecurityType.FutureOption)
                         {
                             result.Add(new TestCaseData(Symbol.Create(securityDatabaseKey.Symbol, securityDatabaseKey.SecurityType,

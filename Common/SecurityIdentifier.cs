@@ -637,7 +637,7 @@ namespace QuantConnect
         {
             return market switch
             {
-                "ftx" => GenerateFtxCryptoFuture(date, symbol),
+                "ftx" => GenerateFtxCryptoFuture(date, symbol, underlying),
                 _ => throw new NotImplementedException("The specified market does not have the CryptoFuture asset class.")
             };
         }
@@ -650,11 +650,9 @@ namespace QuantConnect
             var lastFriday= FuturesExpiryUtilityFunctions.LastFriday(expiryYearMonth);
             var ftxExpiry = new DateTime(lastFriday.Year, lastFriday.Month, lastFriday.Day, 2, 0, 0);
 
-            var expiryStr = $"{ftxExpiry.Month}{ftxExpiry.Day}";
-            var ticker = $"{symbol}-{expiryStr}";
-
-            underlying = new SecurityIdentifier(symbol, 0);
-            var result = new SecurityIdentifier(ticker, 0, underlying)
+            // var expiryStr = $"{ftxExpiry.Month}{ftxExpiry.Day}";
+            // var ticker = $"{symbol}-{expiryStr}";
+            var result = new SecurityIdentifier(symbol, 0, underlying)
             {
                 _date = ftxExpiry
             };

@@ -541,6 +541,9 @@ namespace QuantConnect.Util
                 case SecurityType.Crypto:
                     return !isHourOrDaily ? Path.Combine(directory, symbol.Value.ToLowerInvariant()) : directory;
 
+                case SecurityType.CryptoFuture:
+                    return !isHourOrDaily ? Path.Combine(directory, symbol.Value.ToLowerInvariant()) : directory;
+
                 case SecurityType.Option:
                 case SecurityType.IndexOption:
                     // options uses the underlying symbol for pathing.
@@ -737,6 +740,13 @@ namespace QuantConnect.Util
 
                     return $"{formattedDate}_{tickTypeString}.zip";
                 case SecurityType.Crypto:
+                    if (isHourOrDaily)
+                    {
+                        return $"{symbol.Value.ToLowerInvariant()}_{tickTypeString}.zip";
+                    }
+
+                    return $"{formattedDate}_{tickTypeString}.zip";
+                case SecurityType.CryptoFuture:
                     if (isHourOrDaily)
                     {
                         return $"{symbol.Value.ToLowerInvariant()}_{tickTypeString}.zip";
