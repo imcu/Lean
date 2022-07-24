@@ -29,6 +29,7 @@ using QuantConnect.Data.Fundamental;
 using QuantConnect.Data.Market;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
+using QuantConnect.Lean.Engine;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Lean.Engine.Results;
 using QuantConnect.Lean.Engine.TransactionHandlers;
@@ -82,15 +83,25 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             _dataQueueHandler?.DisposeSafely();
         }
 
-        [Test]
-        public void WarmupOptionSelection()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WarmupOptionSelection(bool useWarmupResolution)
         {
             _startDate = new DateTime(2014, 6, 9);
             _manualTimeProvider.SetCurrentTimeUtc(_startDate);
 
             var endDate = _startDate.AddDays(1);
             _algorithm.SetBenchmark(x => 1);
-            _algorithm.SetWarmup(2, Resolution.Daily);
+
+            if (useWarmupResolution)
+            {
+                _algorithm.SetWarmup(2, Resolution.Daily);
+            }
+            else
+            {
+                _algorithm.SetWarmup(TimeSpan.FromDays(2));
+            }
+
             _algorithm.UniverseSettings.Resolution = Resolution.Hour;
             var feed = RunDataFeed();
             // after algorithm initialization let's set the time provider time to reflect warmup window
@@ -230,15 +241,23 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             Assert.IsTrue(assertedHoldings);
         }
 
-        [Test]
-        public void WarmupFutureSelection()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WarmupFutureSelection(bool useWarmupResolution)
         {
             _startDate = new DateTime(2013, 10, 10);
             _manualTimeProvider.SetCurrentTimeUtc(_startDate);
 
             var endDate = _startDate.AddDays(1);
             _algorithm.SetBenchmark(x => 1);
-            _algorithm.SetWarmup(2, Resolution.Daily);
+            if (useWarmupResolution)
+            {
+                _algorithm.SetWarmup(2, Resolution.Daily);
+            }
+            else
+            {
+                _algorithm.SetWarmup(TimeSpan.FromDays(2));
+            }
             _algorithm.UniverseSettings.Resolution = Resolution.Hour;
             var feed = RunDataFeed();
             // after algorithm initialization let's set the time provider time to reflect warmup window
@@ -273,8 +292,9 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             Assert.AreNotEqual(0, countLive);
         }
 
-        [Test]
-        public void WarmupExpiredAsset()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WarmupExpiredAsset(bool useWarmupResolution)
         {
             _startDate = new DateTime(2014, 6, 14);
             _manualTimeProvider.SetCurrentTimeUtc(_startDate);
@@ -282,7 +302,14 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             var endDate = _startDate.AddDays(1);
             _algorithm.SetBenchmark(x => 1);
             _algorithm.UniverseSettings.Resolution = Resolution.Daily;
-            _algorithm.SetWarmup(10, Resolution.Daily);
+            if (useWarmupResolution)
+            {
+                _algorithm.SetWarmup(10, Resolution.Daily);
+            }
+            else
+            {
+                _algorithm.SetWarmup(TimeSpan.FromDays(10));
+            }
             var feed = RunDataFeed();
             // after algorithm initialization let's set the time provider time to reflect warmup window
             _manualTimeProvider.SetCurrentTimeUtc(_algorithm.UtcTime);
@@ -311,15 +338,23 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             Assert.IsTrue(emittedData);
         }
 
-        [Test]
-        public void WarmupAddSecurity()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WarmupAddSecurity(bool useWarmupResolution)
         {
             _startDate = new DateTime(2014, 5, 8);
             CustomMockedFileBaseData.StartDate = _startDate;
             _manualTimeProvider.SetCurrentTimeUtc(_startDate);
 
             var endDate = _startDate.AddDays(10);
-            _algorithm.SetWarmup(1, Resolution.Daily);
+            if (useWarmupResolution)
+            {
+                _algorithm.SetWarmup(1, Resolution.Daily);
+            }
+            else
+            {
+                _algorithm.SetWarmup(TimeSpan.FromDays(1));
+            }
             var feed = RunDataFeed(forex: new List<string> { Symbols.EURUSD.ToString() }, resolution: Resolution.Minute);
 
             var emittedData = false;
@@ -1237,13 +1272,21 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             Assert.IsTrue(fineWasCalled);
         }
 
-        [Test]
-        public void FineCoarseFundamentalDataGetsPipedCorrectlyWarmup()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void FineCoarseFundamentalDataGetsPipedCorrectlyWarmup(bool useWarmupResolution)
         {
             _startDate = new DateTime(2014, 3, 27);
             CustomMockedFileBaseData.StartDate = _startDate;
             _manualTimeProvider.SetCurrentTimeUtc(_startDate);
-            _algorithm.SetWarmup(1, Resolution.Daily);
+            if (useWarmupResolution)
+            {
+                _algorithm.SetWarmup(1, Resolution.Daily);
+            }
+            else
+            {
+                _algorithm.SetWarmup(TimeSpan.FromDays(1));
+            }
 
             var fineWasCalled = false;
             var fineWasCalledDuringWarmup = false;
@@ -1615,6 +1658,114 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             Assert.IsFalse(emittedData);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void SkipLiveDividend(bool warmup)
+        {
+            var symbol = Symbols.AAPL;
+            if (warmup)
+            {
+                _startDate = new DateTime(2014, 8, 10);
+                _manualTimeProvider.SetCurrentTimeUtc(_startDate);
+                _algorithm.SetWarmup(5);
+            }
+
+            var startPortfolioValue = _algorithm.Portfolio.TotalPortfolioValue;
+            var feed = RunDataFeed(Resolution.Daily, equities: new List<string> { symbol.Value },
+                    getNextTicksFunction: delegate
+                    {
+                        if (warmup)
+                        {
+                            return Enumerable.Empty<BaseData>();
+                        }
+                        return Enumerable.Range(1, 2)
+                            .Select(
+                                x => x % 2 == 0
+                                    ? (BaseData)new Tick { Symbol = symbol, TickType = TickType.Trade }
+                                    : new Dividend { Symbol = symbol, Value = 2 })
+                            .ToList();
+                    });
+
+            var emittedDividend = false;
+            ConsumeBridge(feed, TimeSpan.FromSeconds(5), true, ts =>
+            {
+                if (ts.Slice.Dividends.ContainsKey(symbol))
+                {
+                    Assert.AreEqual(warmup, _algorithm.IsWarmingUp);
+
+                    emittedDividend = true;
+                    // we got what we wanted shortcut unit test
+                    _manualTimeProvider.SetCurrentTimeUtc(DateTime.UtcNow);
+                }
+            }, secondsTimeStep: warmup ? 60 * 60 : 60 * 60 * 5,
+            endDate: _startDate.AddDays(30));
+
+            Assert.IsTrue(emittedDividend);
+            // we do not handle dividends in live trading, we leave it for the cash sync
+            Assert.AreEqual(startPortfolioValue, _algorithm.Portfolio.TotalPortfolioValue);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LiveSplitHandling(bool warmup)
+        {
+            var symbol = Symbols.AAPL;
+            if (warmup)
+            {
+                _startDate = new DateTime(2014, 06, 10);
+                _manualTimeProvider.SetCurrentTimeUtc(_startDate);
+                _algorithm.SetWarmup(6);
+            }
+
+            var startPortfolioValue = _algorithm.Portfolio.TotalPortfolioValue;
+            var feed = RunDataFeed(Resolution.Daily, equities: new List<string> { symbol.Value },
+                    getNextTicksFunction: delegate
+                    {
+                        if (warmup)
+                        {
+                            return Enumerable.Empty<BaseData>();
+                        }
+                        var time = _manualTimeProvider.GetUtcNow();
+                        return Enumerable.Range(1, 2)
+                            .Select(
+                                x => x % 2 == 0
+                                    ? (BaseData)new Tick { Symbol = symbol, TickType = TickType.Trade, Value = 2 }
+                                    : new Split(symbol, time.ConvertFromUtc(TimeZones.NewYork), 2, 10, SplitType.SplitOccurred))
+                            .ToList();
+                    });
+
+            var holdings = _algorithm.Securities[symbol].Holdings;
+            holdings.SetHoldings(10, quantity: 100);
+
+            var emittedSplit = false;
+            ConsumeBridge(feed, TimeSpan.FromSeconds(5), true, ts =>
+            {
+                if (ts.Slice.Splits.TryGetValue(symbol, out var split) && split.Type == SplitType.SplitOccurred)
+                {
+                    Assert.AreEqual(warmup, _algorithm.IsWarmingUp);
+
+                    emittedSplit = true;
+                    // we got what we wanted shortcut unit test
+                    _manualTimeProvider.SetCurrentTimeUtc(DateTime.UtcNow);
+                }
+            }, secondsTimeStep: warmup ? 60 * 60 : 60 * 60 * 5,
+            endDate: _startDate.AddDays(30));
+
+            Assert.IsTrue(emittedSplit);
+            Assert.AreEqual(startPortfolioValue, _algorithm.Portfolio.TotalPortfolioValue);
+            if (!warmup)
+            {
+                Assert.AreEqual(10, holdings.Quantity);
+                Assert.AreEqual(100, holdings.AveragePrice);
+            }
+            else
+            {
+                // during warmup they shouldn't change
+                Assert.AreEqual(100, holdings.Quantity);
+                Assert.AreEqual(10, holdings.AveragePrice);
+            }
+        }
+
         [Test]
         public void HandlesAuxiliaryDataAtTickResolution()
         {
@@ -1812,13 +1963,17 @@ namespace QuantConnect.Tests.Engine.DataFeeds
                 if (!noOutput)
                 {
                     ConsoleWriteLine("\r\n" + $"Now (EDT): {DateTime.UtcNow.ConvertFromUtc(TimeZones.NewYork):o}" +
-                                     $". TimeSlice.Time (EDT): {timeSlice.Time.ConvertFromUtc(TimeZones.NewYork):o}");
+                                     $". TimeSlice.Time (EDT): {timeSlice.Time.ConvertFromUtc(TimeZones.NewYork):o}. HasData {timeSlice.Slice?.HasData}");
                 }
 
                 if (timeSlice.IsTimePulse)
                 {
                     continue;
                 }
+
+                AlgorithmManager.HandleDividends(timeSlice, _algorithm, liveMode: true);
+                AlgorithmManager.HandleSplits(timeSlice, _algorithm, liveMode: true);
+
                 if (!startedReceivingata
                     && (timeSlice.Slice.Count != 0
                         || sendUniverseData && timeSlice.UniverseData.Count > 0))

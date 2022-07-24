@@ -74,14 +74,7 @@ namespace QuantConnect.Algorithm
         [DocumentationAttribute(HistoricalData)]
         public void SetWarmup(TimeSpan timeSpan, Resolution? resolution)
         {
-            if (_locked)
-            {
-                throw new InvalidOperationException("QCAlgorithm.SetWarmup(): This method cannot be used after algorithm initialized");
-            }
-
-            _warmupBarCount = null;
-            _warmupTimeSpan = timeSpan;
-            _warmupResolution = resolution;
+            SetWarmup(null, timeSpan, resolution);
         }
 
         /// <summary>
@@ -130,14 +123,7 @@ namespace QuantConnect.Algorithm
         [DocumentationAttribute(HistoricalData)]
         public void SetWarmup(int barCount, Resolution? resolution)
         {
-            if (_locked)
-            {
-                throw new InvalidOperationException("QCAlgorithm.SetWarmup(): This method cannot be used after algorithm initialized");
-            }
-
-            _warmupTimeSpan = null;
-            _warmupBarCount = barCount;
-            _warmupResolution = resolution;
+            SetWarmup(barCount, null, resolution);
         }
 
         /// <summary>
@@ -182,7 +168,7 @@ namespace QuantConnect.Algorithm
                 var symbols = Securities.Keys;
                 if (symbols.Count != 0)
                 {
-                    var startTimeUtc = CreateBarCountHistoryRequests(symbols, _warmupBarCount.Value, _warmupResolution)
+                    var startTimeUtc = CreateBarCountHistoryRequests(symbols, _warmupBarCount.Value, Settings.WarmupResolution)
                         .DefaultIfEmpty()
                         .Min(request => request == null ? default : request.StartTimeUtc);
                     if(startTimeUtc != default)
@@ -193,9 +179,9 @@ namespace QuantConnect.Algorithm
                 }
 
                 var defaultResolutionToUse = UniverseSettings.Resolution;
-                if (_warmupResolution.HasValue)
+                if (Settings.WarmupResolution.HasValue)
                 {
-                    defaultResolutionToUse = _warmupResolution.Value;
+                    defaultResolutionToUse = Settings.WarmupResolution.Value;
                 }
 
                 // if the algorithm has no added security, let's take a look at the universes to determine
@@ -206,9 +192,9 @@ namespace QuantConnect.Algorithm
                 {
                     var config = universe.Configuration;
                     var resolution = universe.Configuration.Resolution;
-                    if (_warmupResolution.HasValue)
+                    if (Settings.WarmupResolution.HasValue)
                     {
-                        resolution = _warmupResolution.Value;
+                        resolution = Settings.WarmupResolution.Value;
                     }
                     var exchange = MarketHoursDatabase.GetExchangeHours(config);
                     var start = _historyRequestFactory.GetStartTimeAlgoTz(config.Symbol, _warmupBarCount.Value, resolution, exchange, config.DataTimeZone);
@@ -921,6 +907,21 @@ namespace QuantConnect.Algorithm
         private bool HistoryRequestValid(Symbol symbol)
         {
             return symbol.SecurityType == SecurityType.Future || !UniverseManager.ContainsKey(symbol) && !symbol.IsCanonical();
+        }
+
+        /// <summary>
+        /// Will set warmup settings validating the algorithm has not finished initialization yet
+        /// </summary>
+        private void SetWarmup(int? barCount, TimeSpan? timeSpan, Resolution? resolution)
+        {
+            if (_locked)
+            {
+                throw new InvalidOperationException("QCAlgorithm.SetWarmup(): This method cannot be used after algorithm initialized");
+            }
+
+            _warmupTimeSpan = timeSpan;
+            _warmupBarCount = barCount;
+            Settings.WarmupResolution = resolution;
         }
     }
 }
