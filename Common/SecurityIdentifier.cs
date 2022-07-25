@@ -174,6 +174,7 @@ namespace QuantConnect
                     case SecurityType.Equity:
                     case SecurityType.Option:
                     case SecurityType.Future:
+                    case SecurityType.CryptoFuture:
                     case SecurityType.Index:
                     case SecurityType.FutureOption:
                     case SecurityType.IndexOption:
@@ -629,7 +630,7 @@ namespace QuantConnect
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
         public static SecurityIdentifier GenerateCryptoFuture(
-            DateTime date,
+            DateTime expiry,
             string symbol,
             string market,
             SecurityIdentifier underlying = null
@@ -637,22 +638,26 @@ namespace QuantConnect
         {
             return market switch
             {
-                "ftx" => GenerateFtxCryptoFuture(date, symbol, underlying),
+                "ftx" => GenerateFtxCryptoFuture(expiry, symbol, underlying),
                 _ => throw new NotImplementedException("The specified market does not have the CryptoFuture asset class.")
             };
         }
 
-        private static SecurityIdentifier GenerateFtxCryptoFuture(DateTime date, string symbol, SecurityIdentifier underlying = null)
+        private static SecurityIdentifier GenerateFtxCryptoFuture(DateTime expiry, string symbol, SecurityIdentifier underlying = null)
         {
-            var year = date.Year;
-            var month = FuturesExpiryUtilityFunctions.GetQuarterLastMonth(date);
+            var year = expiry.Year;
+            var month = FuturesExpiryUtilityFunctions.GetQuarterLastMonth(expiry);
             var expiryYearMonth = new DateTime(year, month, 1);
             var lastFriday= FuturesExpiryUtilityFunctions.LastFriday(expiryYearMonth);
             var ftxExpiry = new DateTime(lastFriday.Year, lastFriday.Month, lastFriday.Day, 2, 0, 0);
 
-            // var expiryStr = $"{ftxExpiry.Month}{ftxExpiry.Day}";
-            // var ticker = $"{symbol}-{expiryStr}";
-            var result = new SecurityIdentifier(symbol, 0, underlying)
+            var expiryStr = $"{ftxExpiry.Month}{ftxExpiry.Day}";
+            var ticker = $"{symbol}-{expiryStr}";
+            if (underlying == null)
+            {
+                underlying = Empty;
+            }
+            var result = new SecurityIdentifier(ticker, 0, underlying)
             {
                 _date = ftxExpiry
             };

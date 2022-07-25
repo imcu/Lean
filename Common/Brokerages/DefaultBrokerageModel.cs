@@ -47,6 +47,7 @@ namespace QuantConnect.Brokerages
             {SecurityType.Equity, Market.USA},
             {SecurityType.Option, Market.USA},
             {SecurityType.Future, Market.CME},
+            {SecurityType.CryptoFuture, Market.FTX},
             {SecurityType.FutureOption, Market.CME},
             {SecurityType.Forex, Market.Oanda},
             {SecurityType.Cfd, Market.Oanda},
@@ -115,7 +116,8 @@ namespace QuantConnect.Brokerages
         /// <returns>True if the brokerage could process the order, false otherwise</returns>
         public virtual bool CanSubmitOrder(Security security, Order order, out BrokerageMessageEvent message)
         {
-            if ((security.Type == SecurityType.Future || security.Type == SecurityType.FutureOption) && order.Type == OrderType.MarketOnOpen)
+            if (security.Type is (SecurityType.Future or SecurityType.FutureOption or SecurityType.CryptoFuture) &&
+                order.Type == OrderType.MarketOnOpen)
             {
                 message = new BrokerageMessageEvent(BrokerageMessageType.Warning, "NorSupported",
                     "MarketOnOpen orders are not supported for futures and future options.");
@@ -204,6 +206,7 @@ namespace QuantConnect.Brokerages
                 case SecurityType.Option:
                 case SecurityType.FutureOption:
                 case SecurityType.Future:
+                case SecurityType.CryptoFuture:
                 case SecurityType.Index:
                 case SecurityType.IndexOption:
                 default:
@@ -245,6 +248,8 @@ namespace QuantConnect.Brokerages
                     break;
                 case SecurityType.Future:
                     break;
+                case SecurityType.CryptoFuture:
+                    break;
                 case SecurityType.Cfd:
                     break;
                 case SecurityType.Crypto:
@@ -273,6 +278,7 @@ namespace QuantConnect.Brokerages
                 case SecurityType.Forex:
                 case SecurityType.Cfd:
                 case SecurityType.Crypto:
+                case SecurityType.CryptoFuture:
                 case SecurityType.Index:
                     return new ConstantFeeModel(0m);
 
@@ -311,6 +317,7 @@ namespace QuantConnect.Brokerages
                 case SecurityType.Option:
                 case SecurityType.FutureOption:
                 case SecurityType.Future:
+                case SecurityType.CryptoFuture:
                 default:
                     return new ConstantSlippageModel(0);
             }
@@ -361,6 +368,7 @@ namespace QuantConnect.Brokerages
             return security.Type switch
             {
                 SecurityType.Future => new FutureMarginModel(RequiredFreeBuyingPowerPercent, security),
+                SecurityType.CryptoFuture => new FutureMarginModel(RequiredFreeBuyingPowerPercent, security),
                 SecurityType.FutureOption => new FuturesOptionsMarginModel(RequiredFreeBuyingPowerPercent, (Option)security),
                 SecurityType.IndexOption => new OptionMarginModel(RequiredFreeBuyingPowerPercent),
                 SecurityType.Option => new OptionMarginModel(RequiredFreeBuyingPowerPercent),

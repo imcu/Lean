@@ -237,7 +237,7 @@ namespace QuantConnect
         /// <returns>A new Symbol object for the specified future contract</returns>
         public static Symbol CreateCryptoFuture(string ticker, string market, DateTime expiry, string alias = null)
         {
-            var sid = SecurityIdentifier.GenerateFuture(expiry, ticker, market);
+            var sid = SecurityIdentifier.GenerateCryptoFuture(expiry, ticker, market);
             return new Symbol(sid, alias ?? GetAlias(sid));
         }
 
